@@ -8,7 +8,6 @@ NOTION_API_KEY = os.environ.get('NOTION_API_KEY')
 DATABASE_ID = os.environ.get('DATABASE_ID')
 NOTION_VERSION = "2022-06-28"
 
-# 収集ソース設定
 SOURCES = {
     "OpenAI": "https://openai.com/blog/rss.xml",
     "DeepMind": "https://deepmind.google/discover/blog/rss.xml",
@@ -19,7 +18,6 @@ SOURCES = {
     "MIT Tech": "https://www.technologyreview.jp/feed/"
 }
 
-# 収集基準キーワード
 KEYWORDS = ["API", "アップデート", "規制", "法", "EU AI Act", "提携", "コスト", "削減", "エージェント", "Agent"]
 
 def get_filtered_news():
@@ -29,13 +27,12 @@ def get_filtered_news():
             feed = feedparser.parse(url)
             count = 0
             for entry in feed.entries:
-                if count >= 3: break # 各サイト最大3件
+                if count >= 3: break
                 title = entry.get('title', '')
                 summary = entry.get('summary', entry.get('description', ''))
                 link = entry.get('link', '')
                 
                 content_text = (title + summary).lower()
-                # キーワードのいずれかが含まれているかチェック
                 if any(k.lower() in content_text for k in KEYWORDS):
                     all_news.append({"source": source_name, "title": title, "link": link})
                     count += 1
@@ -52,13 +49,14 @@ def create_notion_page(news_items):
     }
     
     today_str = datetime.now().strftime('%Y-%m-%d')
-    
     children = []
+
     if not news_items:
+        # ニュースがない場合もメッセージを入れる
         children.append({
             "object": "block",
             "type": "paragraph",
-            "paragraph": {"rich_text": [{"text": {"content": "本日の条件に合うニュースはありませんでした。"}}] }
+            "paragraph": {"rich_text": [{"text": {"content": "💡 本日の収集基準に合致するニュースはありませんでした。"}}] }
         })
     else:
         for item in news_items:
@@ -84,9 +82,7 @@ def create_notion_page(news_items):
     data = {
         "parent": {"database_id": DATABASE_ID},
         "properties": {
-            "Name": {
-                "title": [{"text": {"content": today_str}}] # Name列に日付のみ記載
-            }
+            "Name": {"title": [{"text": {"content": today_str}}]}
         },
         "children": children
     }
@@ -99,4 +95,5 @@ def create_notion_page(news_items):
 
 if __name__ == "__main__":
     news = get_filtered_news()
+    # ニュースが0件でも必ず投稿関数を呼ぶように変更
     create_notion_page(news)
